@@ -1,2 +1,2 @@
 # KspModApp
-A commandline app to auto add mod to KSP
+A commandline app whcih can ley you add mods easily
