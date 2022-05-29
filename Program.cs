@@ -190,7 +190,6 @@ namespace ksp_mod_main
                         ZipFile.ExtractToDirectory(Path.Combine(jsonf["gameDir"].ToString(), "GameData", fname + ".zip"), Path.Combine(jsonf["gameDir"].ToString(), "GameData", fname));
                         File.Delete(Path.Combine(jsonf["gameDir"].ToString(), "GameData", fname + ".zip"));
                         Console.WriteLine("Compplete !");
-                        File.Delete(@"./data.json");
                     }
                 }
             }
