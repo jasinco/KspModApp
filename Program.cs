@@ -1,303 +1,298 @@
-﻿using Newtonsoft.Json.Linq;
-using Newtonsoft.Json;
 using System.IO.Compression;
+using Newtonsoft.Json.Linq;
 
-namespace ksp_mod_main
+
+namespace kspma
 {
     public class Program
     {
         public static void Main(string[] args)
         {
-            string version = "1.0.0";
-            List<string> gameversion = getGameVersionOrCreate();
-
-            Console.WriteLine("KSPMA Version: "+version);
-            if (args.Length > 0) {
-                switch (args[0].ToString())
-                {
-                    case "-q":
-                        if (args.Length == 2) {
-                            Search(args[1]);
-                        }
-                        break;
-                    case "search":
-                        if (args.Length == 2)
+            string helpstring = "1. (-h help) for help options\n2. (-l list) to list downloaded mods\n3. (-i install) to install files\n4. (-s search) To search files";
+            var versions = getgameversions();
+            switch (args.Length)
+            {
+                case 0:
+                    Console.WriteLine(helpstring);
+                    break;
+                case 1:
+                    if (args[0] == "list" || args[0] == "-l") {
+                        var pathd = Directory.GetDirectories(Path.Combine(versions[0], "GameData"));
+                        Console.WriteLine("Downloaded: ");
+                        foreach (var i in pathd)
                         {
-                            Search(args[1]);
-                        }
-                        break;
-                    case "-i":
-                        if (args.Length == 3)
-                        {
-                            switch (args[1])
+                            var filename = Path.GetFileName(i);
+                            if (filename != "Squad")
                             {
-                                case "--id":
-                                    Install("id", args[2], gameversion);
-                                    break;
-                                case "--name":
-                                    Install("name", args[2], gameversion);
-                                    break;
+                                Console.WriteLine("\t- "+filename);
                             }
                         }
-                        break;
-                    default:
-                        Console.WriteLine("Invalid Options");
-                        break;
-                }
-            }
-            else
-            {
-                Console.WriteLine("No Options");
-            }
-        }
-
-        public static void Install(string opt, string keyword, List<string> gameversion)
-        {            
-            switch (opt)
-            {
-                case "id":
-                    StreamReader r = new StreamReader(@"./data.json");
-                    string all = r.ReadToEnd();
-                    JArray jsonArray = JArray.Parse(all);
-                    foreach (JToken item in jsonArray)
+                    }else if (args[1] == "help" || args[1] == "-h")
+                        Console.WriteLine(helpstring);
+                    break;
+                case 2:
+                    if (args[0] == "-s" || args[0] == "search")
                     {
-                        if (item["id"].ToString() == keyword)
-                        {
-                            bool check = false;
-                            while (check == false)
-                            {
-                                Console.Write("Are you sure to download " + item["name"] + "(yes or false)? ");
-                                string ans = Console.ReadLine();
-                                if (ans == "yes")
-                                {
-                                    check = true;
-                                    break;
-                                } else if(ans == "false")
-                                {
-                                    check = false;
-                                    break;
-                                }
-                                else
-                                {
-                                    Console.WriteLine("UNavaliavle");
-                                }
-                            }
-                            if (check)
-                            {
-                                var setting_lowest = Convert.ToInt32(gameversion[0].Split(".")[1]);
-                                var setting_highest = Convert.ToInt32(gameversion[1].Split(".")[1]);
-                                var info_highest = Convert.ToInt32(item["versions"][0]["game_version"].ToString().Split('.')[1]);
-                                var info_lowest = Convert.ToInt32(item["versions"][JArray.Parse(item["versions"].ToString()).Count() - 1]["game_version"].ToString().Split('.')[1]);
-                                if (setting_lowest <= info_highest)
-                                {
-                                    IEnumerable<int> setting_allowed = Enumerable.Range(setting_lowest, setting_highest-1).Select(x => x + 1).ToList();
-                                    IEnumerable<int> info_allowed = Enumerable.Range(info_lowest, info_highest-1).Select(x => x + 1).ToList();
-                                    int[] finalex = info_allowed.Where(x => setting_allowed.Contains(x)).ToArray();
-                                    var final = Convert.ToString(finalex[finalex.Length - 1]);
-                                    foreach (var i in item["versions"])
-                                    {
-                                        if (i["game_version"].ToString().Split(".")[1] == final)
-                                        {
-                                            var url = "https://spacedock.info" + i["download_path"];
-                                            var task = Install_Task(url, item["name"].ToString());
-                                            task.Wait();
-                                            break;
-                                        }
-                                    }
-                                }
-                                break;
-                            }
-                        }
+                        search(args[1]);
+                    }
+                    if (args[0] == "-i" || args[0] == "install")
+                    {
+                        install(args[1], "name", versions);
                     }
                     break;
-                case "name":
-                    StreamReader rd = new StreamReader(@"./data.json");
-                    string alld = rd.ReadToEnd();
-                    JArray jsonArrays = JArray.Parse(alld);
-                    foreach (JToken item in jsonArrays)
+                case 3:
+                    if (args[0] == "-i" || args[0] == "install")
                     {
-                        if (item["name"].ToString() == keyword)
+                        if (args[1] == "--name")
                         {
-                            bool check = false;
-                            while (check == false)
-                            {
-                                Console.Write("Are you sure to download " + item["name"] + "(yes or false)? ");
-                                string ans = Console.ReadLine();
-                                if (ans == "yes")
-                                {
-                                    check = true;
-                                    break;
-                                }
-                                else if (ans == "false")
-                                {
-                                    check = false;
-                                    break;
-                                }
-                                else
-                                {
-                                    Console.WriteLine("UNavaliavle");
-                                }
-                            }
-                            if (check)
-                            {
-                                var setting_lowest = Convert.ToInt32(gameversion[0].Split(".")[1]);
-                                var setting_highest = Convert.ToInt32(gameversion[1].Split(".")[1]);
-                                var info_highest = Convert.ToInt32(item["versions"][0]["game_version"].ToString().Split('.')[1]);
-                                var info_lowest = Convert.ToInt32(item["versions"][JArray.Parse(item["versions"].ToString()).Count() - 1]["game_version"].ToString().Split('.')[1]);
-                                if (setting_lowest <= info_highest)
-                                {
-                                    IEnumerable<int> setting_allowed = Enumerable.Range(setting_lowest, setting_highest - 1).Select(x => x + 1).ToList();
-                                    IEnumerable<int> info_allowed = Enumerable.Range(info_lowest, info_highest - 1).Select(x => x + 1).ToList();
-                                    int[] finalex = info_allowed.Where(x => setting_allowed.Contains(x)).ToArray();
-                                    var final = Convert.ToString(finalex[finalex.Length - 1]);
-                                    foreach (var i in item["versions"])
-                                    {
-                                        if (i["game_version"].ToString().Split(".")[1] == final)
-                                        {
-                                            var url = "https://spacedock.info" + i["download_path"];
-                                            var task = Install_Task(url, item["name"].ToString());
-                                            task.Wait();
-                                            break;
-                                        }
-                                    }
-                                }
-                                break;
-                            }
+                            install(args[2], "name", versions);
+                        }
+                        else if (args[1] == "--id")
+                        {
+                            install(args[2], "id", versions);
                         }
                     }
                     break;
             }
         }
 
-        public static async Task Install_Task(string url, string fname)
+        public static List<string> getgameversions()
         {
-            using (var httpClient = new HttpClient())
+            var returnstring = new List<string>();
+            var optionspath = Path.Combine(Environment.ExpandEnvironmentVariables("%userprofile%"), ".config", "KSPMA");
+            Directory.CreateDirectory(optionspath);
+            if (!File.Exists(Path.Combine(optionspath, "options.json")))
             {
-                var response = await httpClient.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-                if (response.Content.Headers.ContentType.ToString() == "application/zip")
-                {
-                    string fp = Path.Combine(Path.Combine(Environment.ExpandEnvironmentVariables("%userprofile%"), ".config", "KSPMA"), "options.json");
-                    var jsonf = JObject.Parse(File.ReadAllText(fp));
-                    using (var stream = await response.Content.ReadAsStreamAsync())
-                    {
-                        //儲存檔案
-                        var fileInfo = new FileInfo(Path.Combine(jsonf["gameDir"].ToString(), "GameData",fname+".zip"));
-                        using (var fileStream = fileInfo.OpenWrite())
-                        {
-                            await stream.CopyToAsync(fileStream);
-                        }
-                        ZipFile.ExtractToDirectory(Path.Combine(jsonf["gameDir"].ToString(), "GameData", fname + ".zip"), Path.Combine(jsonf["gameDir"].ToString(), "GameData", fname));
-                        File.Delete(Path.Combine(jsonf["gameDir"].ToString(), "GameData", fname + ".zip"));
-                        Console.WriteLine("Compplete !");
-                    }
-                }
-            }
-        }
-
-        public static void Search(string search)
-        {
-            var baseModeUrl = String.Format("https://spacedock.info/api/search/mod?query={0}", search);
-            var task = Get_Search_Data(baseModeUrl);
-            task.Wait();
-        }
-
-        public static async Task Get_Search_Data(string url)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.Timeout = TimeSpan.FromSeconds(20);
-                HttpResponseMessage response = await client.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-                var responseBody = await response.Content.ReadAsStringAsync();
-                JArray jsonArray = JArray.Parse(responseBody);
-                int longest = 0;
-                foreach (var item in jsonArray)
-                {
-                    if (item["name"].ToString().Length > longest)
-                    {
-                        longest = item["name"].ToString().Length;
-                    }
-                }
-
-                int logind = 0;
-
-                foreach (var item in jsonArray)
-                {
-                    if (item["id"].ToString().Length > logind)
-                    {
-                        logind = item["id"].ToString().Length;
-                    }
-                }
-
-                Console.WriteLine('\n');
-                Console.Write("Name".PadRight(longest+2));
-                Console.WriteLine(" ID");
-                for (int i = 0; i < (longest); i++)
-                {
-                    Console.Write('-');
-                }
-                Console.Write("   ");
-                for (int i = 0; i < (logind+2); i++)
-                {
-                    Console.Write('-');
-                }
-                Console.WriteLine("");
-                foreach (var item in jsonArray)
-                {
-                    Console.WriteLine(item["name"].ToString().PadRight(longest+3)+ item["id"]);
-                }
-                // add to temp
-                File.WriteAllText(@"./data.json",jsonArray.ToString());
-            }
-        }
-        public static List<string> getGameVersionOrCreate()
-        {
-            Directory.CreateDirectory(Path.Combine(Environment.ExpandEnvironmentVariables("%userprofile%"), ".config", "KSPMA"));
-            string fp = Path.Combine(Path.Combine(Environment.ExpandEnvironmentVariables("%userprofile%"), ".config", "KSPMA"), "options.json");
-            if (!File.Exists(fp))
-            {
-                Console.Write("Game Version: ");
-                string gameversion = Console.ReadLine();
+                Console.Write("GameVersion: ");
+                var gameversion = Console.ReadLine();
                 Console.Write("Range: ");
-                int range = Convert.ToInt32(Console.ReadLine());
-                Console.Write("Game Directory: ");
-                string gamaedir = Console.ReadLine().Replace("\\","/");
-                string temp_parse = "{" + $"'gameVersion':{gameversion},"+"\n"+$"'Range':{range},"+"\n"+$"'gameDir':{gamaedir}"+"}";
-                File.WriteAllText(fp, temp_parse);
-                var lower = gameversion.Replace(gameversion.Split(".")[1], Convert.ToString(Convert.ToInt32(gameversion.Split(".")[1]) - range));
-                var returninfo = new List<string>();
-                returninfo.Add(lower);returninfo.Add(gameversion);
-                return returninfo;
+                var range = Console.ReadLine();
+                Console.Write("GameDir: ");
+                var gamedir = Console.ReadLine().Replace('\\','/');
+                var model = "{" + $"\"gameVersion\":\"{gameversion}\"," + "\n" + $"\"Range\":{range}," + "\n" + $"\"gameDir\":{gamedir}" + "}";
+                File.WriteAllText(Path.Combine(optionspath, "options.json"), model);
+                returnstring.Add(gamedir);
+                returnstring.Add(gameversion.Replace(gameversion.Split(".")[1], Convert.ToString(Convert.ToInt32(gameversion.Split(".")[1])-Convert.ToInt32(range))));
+                returnstring.Add(gameversion);
             }
             else
             {
+                var fp = File.ReadAllText(Path.Combine(optionspath, "options.json"));
+                var jsonread = JObject.Parse(fp);
                 try
                 {
-                    var all = JObject.Parse(File.ReadAllText(fp));
-                    var gameversion = all["gameVersion"].ToString();
-                    var lower = gameversion.Replace(gameversion.Split(".")[1], Convert.ToString(Convert.ToInt32(gameversion.Split(".")[1]) - Convert.ToInt32(all["Range"].ToString())));
-                    var returninfo = new List<string>();
-                    returninfo.Add(lower); returninfo.Add(gameversion);
-                    return returninfo;
+                    var gameversion = jsonread.GetValue("gameVersion").ToString();
+                    var range = jsonread.GetValue("Range").ToString();
+                    var gamedir = jsonread.GetValue("gameDir").ToString();
+                    returnstring.Add(gamedir);
+                    returnstring.Add(gameversion.Replace(gameversion.Split(".")[1], Convert.ToString(Convert.ToInt32(gameversion.Split(".")[1]) - Convert.ToInt32(range))));
+                    returnstring.Add(gameversion);
                 }
                 catch
                 {
-                    Console.Write("Game Version: ");
-                    string gameversion = Console.ReadLine();
+                    Console.Write("GameVersion: ");
+                    var gameversion = Console.ReadLine();
                     Console.Write("Range: ");
-                    int range = Convert.ToInt32(Console.ReadLine());
-                    Console.Write("Game Directory: ");
-                    string gamaedir = Console.ReadLine().Replace("\\", "/");
-                    string temp_parse = "{" + $"\"gameVersion\":\"{gameversion}\"," + "\n" + $"\"Range\":{range}," + "\n" + $"\"gameDir\":{gamaedir}" + "}";
-                    File.WriteAllText(fp, temp_parse);
-                    var lower = gameversion.Replace(gameversion.Split(".")[1], Convert.ToString(Convert.ToInt32(gameversion.Split(".")[1]) - range));
-                    var returninfo = new List<string>();
-                    returninfo.Add(lower); returninfo.Add(gameversion);
-                    return returninfo;
+                    var range = Console.ReadLine();
+                    Console.Write("GameDir: ");
+                    var gamedir = Console.ReadLine().Replace('\\', '/');
+                    var model = "{" + $"\"gameVersion\":\"{gameversion}\"," + "\n" + $"\"Range\":{range}," + "\n" + $"\"gameDir\":{gamedir}" + "}";
+                    File.WriteAllText(Path.Combine(optionspath, "options.json"), model);
+                    returnstring.Add(gamedir);
+                    returnstring.Add(gameversion.Replace(gameversion.Split(".")[1], Convert.ToString(Convert.ToInt32(gameversion.Split(".")[1]) - Convert.ToInt32(range))));
+                    returnstring.Add(gameversion);
                 }
             }
-            
+            return returnstring;
         }
+
+        public static void search(string keyboard)
+        {
+            string url = String.Format("https://spacedock.info/api/search/mod?query={0}",keyboard);
+            var task = searching(url);
+            task.Wait();
+        }
+
+        public static async Task searching(string url)
+        {
+            using (var client = new HttpClient())
+            {
+                var resp = await client.GetAsync(url);
+                resp.EnsureSuccessStatusCode();
+                var response = await resp.Content.ReadAsStringAsync();
+                var name = new List<string>();
+                var jsonresp = JArray.Parse(response);
+                int longest = 0;
+                int longestid = 0;
+                foreach (var i in jsonresp)
+                {
+                    name.Add(i["name"].ToString());
+                    if (i["name"].ToString().Length > longest)
+                    {
+                        longest = i["name"].ToString().Length;
+                    }
+                    if (i["id"].ToString().Length > longestid)
+                    {
+                        longestid = i["id"].ToString().Length;
+                    }
+                }
+                if (longest != 0)
+                {
+                    Console.WriteLine("Name".PadRight(longest + 3) + "ID");
+                    for (int i = 0; i < longest + 1; i++)
+                    {
+                        Console.Write("-");
+                    }
+                    Console.Write("  ");
+                    for (int i = 0; i < longestid; i++)
+                    {
+                        Console.Write("-");
+                    }
+                    Console.Write("\n");
+                    foreach (var i in jsonresp)
+                    {
+                        Console.WriteLine(i["name"].ToString().PadRight(longest + 3) + i["id"].ToString());
+                    }
+                    string path = Path.Combine(Path.GetTempPath(), "KSPMA", "data.json");
+                    Directory.CreateDirectory(Path.GetDirectoryName(path));
+                    File.WriteAllText(path, jsonresp.ToString());
+                }
+                else
+                {
+                    Console.WriteLine("Nothing Found");
+                }
+            }
+        }
+
+        public static void install(string keyword, string type, List<string> gamever)
+        {
+            var jsonfile = JArray.Parse(File.ReadAllText(Path.Combine(Path.GetTempPath(), "KSPMA", "data.json")));
+            if (type == "id")
+            {
+                var answ = jsonfile.ToList().Where(x => x["id"].ToString()==keyword).FirstOrDefault();
+                if (answ == null)
+                {
+                    Console.WriteLine("Nothing found");
+                }
+                else
+                {
+                    for (var i = 0; i < 3; i++)
+                    {
+                        Console.Write(String.Format("Do you want to dwonlaod {0}? ", answ["name"]));
+                        var ans = Console.ReadLine();
+                        if (ans == "yes")
+                        {
+                            var highest = Convert.ToDouble(gamever[2].ToString().Replace("1.", ""));
+                            var lowest = Convert.ToDouble(gamever[1].ToString().Replace("1.",""));
+                            var versionchk = answ["versions"].ToList().Where(x => Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) <= highest && Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) >= lowest).FirstOrDefault();
+                            if (versionchk != null)
+                            {
+                                string urldownload = "https://spacedock.info" + versionchk["download_path"].ToString();
+                                string dest = Path.Combine(Path.GetTempPath(), "KSPMA", answ["name"]+".zip");
+                                var task = installing(urldownload,dest, gamever[0]);
+                                task.Wait();
+                            }
+                            break;
+                        }
+                        else if(ans == "no")
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            Console.WriteLine("Answer is not correct");
+                        }
+                    }
+                }
+            }
+            else
+            {
+                var answ = jsonfile.ToList().Where(x => x["name"].ToString() == keyword).FirstOrDefault();
+                if (answ == null)
+                {
+                    Console.WriteLine("Nothing found");
+                }
+                else
+                {
+                    for (var i = 0; i < 3; i++)
+                    {
+                        Console.Write(String.Format("Do you want to dwonlaod {0}? ", answ["name"]));
+                        var ans = Console.ReadLine();
+                        if (ans == "yes")
+                        {
+                            var highest = Convert.ToDouble(gamever[2].ToString().Replace("1.", ""));
+                            var lowest = Convert.ToDouble(gamever[1].ToString().Replace("1.", ""));
+                            var versionchk = answ["versions"].ToList().Where(x => Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) <= highest && Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) >= lowest).FirstOrDefault();
+                            if (versionchk != null)
+                            {
+                                string urldownload = "https://spacedock.info" + versionchk["download_path"].ToString();
+                                string dest = Path.Combine(Path.GetTempPath(), "KSPMA", answ["name"] + ".zip");
+                                var task = installing(urldownload, dest, gamever[0]);
+                                task.Wait();
+                            }
+                            break;
+                        }
+                        else if (ans == "no")
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            Console.WriteLine("Answer is not correct");
+                        }
+                    }
+                }
+            }
+        }
+
+        public static async Task installing(string url, string filepath, string save)
+        {
+            Console.WriteLine(url);
+            using (var httpClient = new HttpClient())
+            {
+                var response = await httpClient.GetAsync(url);
+
+                using (var stream = await response.Content.ReadAsStreamAsync())
+                {
+                    if (File.Exists(filepath)) { File.Delete(filepath); }
+                    //儲存檔案
+                    var fileInfo = new FileInfo(filepath);
+                    using (var fileStream = fileInfo.OpenWrite())
+                    {
+                        await stream.CopyToAsync(fileStream);
+                    }
+                    using (ZipArchive i = ZipFile.Open(filepath, ZipArchiveMode.Read))
+                    {
+                        foreach (ZipArchiveEntry entry in i.Entries)
+                        {
+                            string nam = Path.GetDirectoryName(entry.FullName);
+                            if (nam is not null)
+                            {
+                                var gamedataccontain = nam.Where(x => x.ToString() == "GameData").FirstOrDefault();
+                                if (File.Exists(Path.GetFullPath(Path.Combine(save, entry.FullName))))
+                                {
+                                    File.Delete(Path.GetFullPath(Path.Combine(save, entry.FullName)));
+                                }
+                                if (Path.GetFullPath(Path.Combine(save, entry.FullName)).ToString().Contains("."))
+                                {
+                                    if (gamedataccontain.ToString().Length < 1)
+                                    {
+                                        Directory.CreateDirectory(Path.GetFullPath(Path.Combine(save, nam)));
+                                        entry.ExtractToFile(Path.GetFullPath(Path.Combine(save, entry.FullName)));
+                                    }
+                                    else
+                                    {
+                                        Directory.CreateDirectory(Path.GetFullPath(Path.Combine(save, "GameData",nam)));
+                                        entry.ExtractToFile(Path.GetFullPath(Path.Combine(save, "GameData", entry.FullName)));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Console.WriteLine("Complete");
+                }
+            }
+        }
+
     }
 }
