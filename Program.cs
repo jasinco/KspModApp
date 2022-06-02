@@ -168,242 +168,61 @@ namespace kspma
 
         public static void install(string keyword, string type, List<string> gamever)
         {
-            if (File.Exists(Path.Combine(Path.GetTempPath(), "KSPMA", "data.json")))
+            var datajsonfileexist = File.Exists(Path.Combine(Path.GetTempPath(), "KSPMA", "data.json"));
+            
+            static void processTheVersionCompareAndData(string keyword, string type, JArray jsonfile, List<string> gamever)
             {
-                var jsonfile = JArray.Parse(File.ReadAllText(Path.Combine(Path.GetTempPath(), "KSPMA", "data.json")));
-                if (type == "id")
+                var answ = jsonfile.ToList().Where(x => x[type].ToString() == keyword).FirstOrDefault();
+                if (answ != null)
                 {
-                    var answ = jsonfile.ToList().Where(x => x["id"].ToString() == keyword).FirstOrDefault();
-                    if (answ == null)
+                    for (var i = 0; i < 3; i++)
                     {
-                        var temp = data_async(String.Format("https://spacedock.info/api/search/mod?query={0}", keyword).ToString());
-                        temp.Wait();
-                        jsonfile = JArray.Parse(temp.Result);
-                        answ = jsonfile.ToList().Where(x => x["id"].ToString() == keyword).FirstOrDefault();
-                        if (answ == null) {
-                            Console.WriteLine("Nothing found");
+                        Console.Write(String.Format("Do you want to dwonlaod {0}? ", answ["name"]));
+                        var ans = Console.ReadLine();
+                        if (ans == "yes")
+                        {
+                            var highest = Convert.ToDouble(gamever[2].ToString().Replace("1.", ""));
+                            var lowest = Convert.ToDouble(gamever[1].ToString().Replace("1.", ""));
+                            var versionchk = answ["versions"].ToList().Where(x => Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) <= highest && Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) >= lowest).FirstOrDefault();
+                            if (versionchk != null)
+                            {
+                                string urldownload = "https://spacedock.info" + versionchk["download_path"].ToString();
+                                string dest = Path.Combine(Path.GetTempPath(), "KSPMA", answ["name"] + ".zip");
+                                var task = installing(urldownload, dest, gamever[0]);
+                                task.Wait();
+                            }
+                            break;
+                        }
+                        else if (ans == "no")
+                        {
+                            break;
                         }
                         else
                         {
-                            for (var i = 0; i < 3; i++)
-                            {
-                                Console.Write(String.Format("Do you want to dwonlaod {0}? ", answ["name"]));
-                                var ans = Console.ReadLine();
-                                if (ans == "yes")
-                                {
-                                    var highest = Convert.ToDouble(gamever[2].ToString().Replace("1.", ""));
-                                    var lowest = Convert.ToDouble(gamever[1].ToString().Replace("1.", ""));
-                                    var versionchk = answ["versions"].ToList().Where(x => Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) <= highest && Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) >= lowest).FirstOrDefault();
-                                    if (versionchk != null)
-                                    {
-                                        string urldownload = "https://spacedock.info" + versionchk["download_path"].ToString();
-                                        string dest = Path.Combine(Path.GetTempPath(), "KSPMA", answ["name"] + ".zip");
-                                        var task = installing(urldownload, dest, gamever[0]);
-                                        task.Wait();
-                                    }
-                                    break;
-                                }
-                                else if (ans == "no")
-                                {
-                                    break;
-                                }
-                                else
-                                {
-                                    Console.WriteLine("Answer is not correct");
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        for (var i = 0; i < 3; i++)
-                        {
-                            Console.Write(String.Format("Do you want to dwonlaod {0}? ", answ["name"]));
-                            var ans = Console.ReadLine();
-                            if (ans == "yes")
-                            {
-                                var highest = Convert.ToDouble(gamever[2].ToString().Replace("1.", ""));
-                                var lowest = Convert.ToDouble(gamever[1].ToString().Replace("1.", ""));
-                                var versionchk = answ["versions"].ToList().Where(x => Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) <= highest && Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) >= lowest).FirstOrDefault();
-                                if (versionchk != null)
-                                {
-                                    string urldownload = "https://spacedock.info" + versionchk["download_path"].ToString();
-                                    string dest = Path.Combine(Path.GetTempPath(), "KSPMA", answ["name"] + ".zip");
-                                    var task = installing(urldownload, dest, gamever[0]);
-                                    task.Wait();
-                                }
-                                break;
-                            }
-                            else if (ans == "no")
-                            {
-                                break;
-                            }
-                            else
-                            {
-                                Console.WriteLine("Answer is not correct");
-                            }
+                            Console.WriteLine("Answer is not correct");
                         }
                     }
                 }
                 else
                 {
-                    var answ = jsonfile.ToList().Where(x => x["name"].ToString() == keyword).FirstOrDefault();
-                    if (answ == null)
-                    {
-                        var temp = data_async(String.Format("https://spacedock.info/api/search/mod?query={0}", keyword).ToString());
-                        temp.Wait();
-                        jsonfile = JArray.Parse(temp.Result);
-                        answ = jsonfile.ToList().Where(x => x["id"].ToString() == keyword).FirstOrDefault();
-                        if (answ == null)
-                        {
-                            Console.WriteLine("Nothing found");
-                        }
-                        else
-                        {
-                            for (var i = 0; i < 3; i++)
-                            {
-                                Console.Write(String.Format("Do you want to dwonlaod {0}? ", answ["name"]));
-                                var ans = Console.ReadLine();
-                                if (ans == "yes")
-                                {
-                                    var highest = Convert.ToDouble(gamever[2].ToString().Replace("1.", ""));
-                                    var lowest = Convert.ToDouble(gamever[1].ToString().Replace("1.", ""));
-                                    var versionchk = answ["versions"].ToList().Where(x => Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) <= highest && Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) >= lowest).FirstOrDefault();
-                                    if (versionchk != null)
-                                    {
-                                        string urldownload = "https://spacedock.info" + versionchk["download_path"].ToString();
-                                        string dest = Path.Combine(Path.GetTempPath(), "KSPMA", answ["name"] + ".zip");
-                                        var task = installing(urldownload, dest, gamever[0]);
-                                        task.Wait();
-                                    }
-                                    break;
-                                }
-                                else if (ans == "no")
-                                {
-                                    break;
-                                }
-                                else
-                                {
-                                    Console.WriteLine("Answer is not correct");
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        for (var i = 0; i < 3; i++)
-                        {
-                            Console.Write(String.Format("Do you want to dwonlaod {0}? ", answ["name"]));
-                            var ans = Console.ReadLine();
-                            if (ans == "yes")
-                            {
-                                var highest = Convert.ToDouble(gamever[2].ToString().Replace("1.", ""));
-                                var lowest = Convert.ToDouble(gamever[1].ToString().Replace("1.", ""));
-                                var versionchk = answ["versions"].ToList().Where(x => Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) <= highest && Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) >= lowest).FirstOrDefault();
-                                if (versionchk != null)
-                                {
-                                    string urldownload = "https://spacedock.info" + versionchk["download_path"].ToString();
-                                    string dest = Path.Combine(Path.GetTempPath(), "KSPMA", answ["name"] + ".zip");
-                                    var task = installing(urldownload, dest, gamever[0]);
-                                    task.Wait();
-                                }
-                                break;
-                            }
-                            else if (ans == "no")
-                            {
-                                break;
-                            }
-                            else
-                            {
-                                Console.WriteLine("Answer is not correct");
-                            }
-                        }
-                    }
+                    Console.WriteLine("Nothing found");
                 }
+            }
+
+            if (datajsonfileexist)
+            {
+                processTheVersionCompareAndData(keyword,type,JArray.Parse(File.ReadAllText(Path.Combine(Path.GetTempPath(), "KSPMA", "data.json"))), gamever);
             }
             else
             {
                 var temp = data_async(String.Format("https://spacedock.info/api/search/mod?query={0}", keyword).ToString());
                 temp.Wait();
-                var jsonfile = JArray.Parse(temp.Result);
-                if (type == "id")
-                {
-                    var answ = jsonfile.ToList().Where(x => x["id"].ToString() == keyword).FirstOrDefault();
-                    if (answ == null)
-                    {
-                        Console.WriteLine("Nothing found");
-                    }
-                    else
-                    {
-                        for (var i = 0; i < 3; i++)
-                        {
-                            Console.Write(String.Format("Do you want to dwonlaod {0}? ", answ["name"]));
-                            var ans = Console.ReadLine();
-                            if (ans == "yes")
-                            {
-                                var highest = Convert.ToDouble(gamever[2].ToString().Replace("1.", ""));
-                                var lowest = Convert.ToDouble(gamever[1].ToString().Replace("1.", ""));
-                                var versionchk = answ["versions"].ToList().Where(x => Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) <= highest && Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) >= lowest).FirstOrDefault();
-                                if (versionchk != null)
-                                {
-                                    string urldownload = "https://spacedock.info" + versionchk["download_path"].ToString();
-                                    string dest = Path.Combine(Path.GetTempPath(), "KSPMA", answ["name"] + ".zip");
-                                    var task = installing(urldownload, dest, gamever[0]);
-                                    task.Wait();
-                                }
-                                break;
-                            }
-                            else if (ans == "no")
-                            {
-                                break;
-                            }
-                            else
-                            {
-                                Console.WriteLine("Answer is not correct");
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    var answ = jsonfile.ToList().Where(x => x["name"].ToString() == keyword).FirstOrDefault();
-                    if (answ == null)
-                    {
-                        Console.WriteLine("Nothing found");
-                    }
-                    else
-                    {
-                        for (var i = 0; i < 3; i++)
-                        {
-                            Console.Write(String.Format("Do you want to dwonlaod {0}? ", answ["name"]));
-                            var ans = Console.ReadLine();
-                            if (ans == "yes")
-                            {
-                                var highest = Convert.ToDouble(gamever[2].ToString().Replace("1.", ""));
-                                var lowest = Convert.ToDouble(gamever[1].ToString().Replace("1.", ""));
-                                var versionchk = answ["versions"].ToList().Where(x => Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) <= highest && Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) >= lowest).FirstOrDefault();
-                                if (versionchk != null)
-                                {
-                                    string urldownload = "https://spacedock.info" + versionchk["download_path"].ToString();
-                                    string dest = Path.Combine(Path.GetTempPath(), "KSPMA", answ["name"] + ".zip");
-                                    var task = installing(urldownload, dest, gamever[0]);
-                                    task.Wait();
-                                }
-                                break;
-                            }
-                            else if (ans == "no")
-                            {
-                                break;
-                            }
-                            else
-                            {
-                                Console.WriteLine("Answer is not correct");
-                            }
-                        }
-                    }
-                }
+                var jsondata = JArray.Parse(temp.Result);
+                processTheVersionCompareAndData(keyword, type, jsondata, gamever);
             }
         }
+
+
 
         public static async Task<string> data_async(string url)
         {
