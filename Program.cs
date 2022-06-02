@@ -1,4 +1,4 @@
-﻿using System.IO.Compression;
+using System.IO.Compression;
 using Newtonsoft.Json.Linq;
 
 
@@ -176,7 +176,43 @@ namespace kspma
                     var answ = jsonfile.ToList().Where(x => x["id"].ToString() == keyword).FirstOrDefault();
                     if (answ == null)
                     {
-                        Console.WriteLine("Nothing found");
+                        var temp = data_async(String.Format("https://spacedock.info/api/search/mod?query={0}", keyword).ToString());
+                        temp.Wait();
+                        jsonfile = JArray.Parse(temp.Result);
+                        answ = jsonfile.ToList().Where(x => x["id"].ToString() == keyword).FirstOrDefault();
+                        if (answ == null) {
+                            Console.WriteLine("Nothing found");
+                        }
+                        else
+                        {
+                            for (var i = 0; i < 3; i++)
+                            {
+                                Console.Write(String.Format("Do you want to dwonlaod {0}? ", answ["name"]));
+                                var ans = Console.ReadLine();
+                                if (ans == "yes")
+                                {
+                                    var highest = Convert.ToDouble(gamever[2].ToString().Replace("1.", ""));
+                                    var lowest = Convert.ToDouble(gamever[1].ToString().Replace("1.", ""));
+                                    var versionchk = answ["versions"].ToList().Where(x => Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) <= highest && Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) >= lowest).FirstOrDefault();
+                                    if (versionchk != null)
+                                    {
+                                        string urldownload = "https://spacedock.info" + versionchk["download_path"].ToString();
+                                        string dest = Path.Combine(Path.GetTempPath(), "KSPMA", answ["name"] + ".zip");
+                                        var task = installing(urldownload, dest, gamever[0]);
+                                        task.Wait();
+                                    }
+                                    break;
+                                }
+                                else if (ans == "no")
+                                {
+                                    break;
+                                }
+                                else
+                                {
+                                    Console.WriteLine("Answer is not correct");
+                                }
+                            }
+                        }
                     }
                     else
                     {
@@ -214,7 +250,44 @@ namespace kspma
                     var answ = jsonfile.ToList().Where(x => x["name"].ToString() == keyword).FirstOrDefault();
                     if (answ == null)
                     {
-                        Console.WriteLine("Nothing found");
+                        var temp = data_async(String.Format("https://spacedock.info/api/search/mod?query={0}", keyword).ToString());
+                        temp.Wait();
+                        jsonfile = JArray.Parse(temp.Result);
+                        answ = jsonfile.ToList().Where(x => x["id"].ToString() == keyword).FirstOrDefault();
+                        if (answ == null)
+                        {
+                            Console.WriteLine("Nothing found");
+                        }
+                        else
+                        {
+                            for (var i = 0; i < 3; i++)
+                            {
+                                Console.Write(String.Format("Do you want to dwonlaod {0}? ", answ["name"]));
+                                var ans = Console.ReadLine();
+                                if (ans == "yes")
+                                {
+                                    var highest = Convert.ToDouble(gamever[2].ToString().Replace("1.", ""));
+                                    var lowest = Convert.ToDouble(gamever[1].ToString().Replace("1.", ""));
+                                    var versionchk = answ["versions"].ToList().Where(x => Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) <= highest && Convert.ToDouble(x["game_version"].ToString().Replace("1.", "")) >= lowest).FirstOrDefault();
+                                    if (versionchk != null)
+                                    {
+                                        string urldownload = "https://spacedock.info" + versionchk["download_path"].ToString();
+                                        string dest = Path.Combine(Path.GetTempPath(), "KSPMA", answ["name"] + ".zip");
+                                        var task = installing(urldownload, dest, gamever[0]);
+                                        task.Wait();
+                                    }
+                                    break;
+                                }
+                                else if (ans == "no")
+                                {
+                                    break;
+                                }
+                                else
+                                {
+                                    Console.WriteLine("Answer is not correct");
+                                }
+                            }
+                        }
                     }
                     else
                     {
@@ -360,28 +433,25 @@ namespace kspma
                     }
                     using (ZipArchive i = ZipFile.Open(filepath, ZipArchiveMode.Read))
                     {
+                        //get game dir
+                        var extracttopath = Path.GetFullPath(JObject.Parse(File.ReadAllText(Path.Combine(Environment.ExpandEnvironmentVariables("%userprofile%"), ".config", "KSPMA", "options.json")))["gameDir"].ToString());
+                        var gamdatapathcotain = i.Entries.Where(x => x.ToString().Contains("GameData/")).FirstOrDefault()!=null;
                         foreach (ZipArchiveEntry entry in i.Entries)
                         {
-                            string nam = Path.GetDirectoryName(entry.FullName);
-                            if (nam is not null)
+                            var index = entry.FullName.ToString();
+                            if (index.Contains('/') && index.Contains('.'))
                             {
-                                var gamedataccontain = nam.Where(x => x.ToString() == "GameData").FirstOrDefault();
-                                if (File.Exists(Path.GetFullPath(Path.Combine(save, entry.FullName))))
+                                if (gamdatapathcotain)
                                 {
-                                    File.Delete(Path.GetFullPath(Path.Combine(save, entry.FullName)));
+                                    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(Path.Combine(extracttopath, index))));
+                                    if (File.Exists(Path.GetFullPath(Path.Combine(extracttopath, index)))) { File.Delete(Path.GetFullPath(Path.Combine(extracttopath, index))); }
+                                    entry.ExtractToFile(Path.GetFullPath(Path.Combine(extracttopath, index)));
                                 }
-                                if (Path.GetFullPath(Path.Combine(save, entry.FullName)).ToString().Contains("."))
+                                else
                                 {
-                                    if (gamedataccontain.ToString().Length < 1)
-                                    {
-                                        Directory.CreateDirectory(Path.GetFullPath(Path.Combine(save, nam)));
-                                        entry.ExtractToFile(Path.GetFullPath(Path.Combine(save, entry.FullName)));
-                                    }
-                                    else
-                                    {
-                                        Directory.CreateDirectory(Path.GetFullPath(Path.Combine(save, "GameData", nam)));
-                                        entry.ExtractToFile(Path.GetFullPath(Path.Combine(save, "GameData", entry.FullName)));
-                                    }
+                                    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(Path.Combine(extracttopath, "GameData",index))));
+                                    if (File.Exists(Path.GetFullPath(Path.Combine(extracttopath, "GameData", index)))) { File.Delete(Path.GetFullPath(Path.Combine(extracttopath, "GameData", index))); }
+                                    entry.ExtractToFile(Path.GetFullPath(Path.Combine(extracttopath, "GameData",index)));
                                 }
                             }
                         }
